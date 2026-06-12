@@ -14,10 +14,18 @@ processing, downsampling, etc.) without rework.
 ## Install
 
 ```bash
-python -m pip install -e .
+python -m pip install -e .          # runtime install
+python -m pip install -e ".[dev]"   # + test/build tooling
 ```
 
-Requires Python ≥ 3.9 with `numpy`, `pandas`, and `matplotlib`.
+Requires Python ≥ 3.9 with `numpy`, `pandas`, and `matplotlib`. The package
+ships type information (`py.typed`), so type checkers see its annotations.
+
+To build a distributable wheel and sdist:
+
+```bash
+python -m build      # writes dist/morph_toolbox-*.whl and *.tar.gz
+```
 
 ## Quick start
 
@@ -109,3 +117,7 @@ python -m pytest
 
 > `example_tools.py` at the repo root is a reference scratchpad of prior
 > functions and is **not** part of the package.
+
+## License
+
+[MIT](LICENSE). © 2026 Shuonan Chen.

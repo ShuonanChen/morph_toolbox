@@ -4,22 +4,49 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "morph_toolbox"
-version = "0.1.0"
 description = "A small toolbox for loading, converting, and visualizing neuron morphology (SWC) data."
 readme = "README.md"
 requires-python = ">=3.9"
-authors = [{ name = "Shuonan Chen" }]
+license = { text = "MIT" }
+authors = [{ name = "Shuonan Chen", email = "shuonan.chen@alleninstitute.org" }]
+keywords = ["neuroscience", "morphology", "swc", "neuron", "visualization"]
 dependencies = [
     "numpy>=1.20",
     "pandas>=1.3",
     "matplotlib>=3.4",
 ]
+dynamic = ["version"]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "build>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/shuonanchen/morph_toolbox"
+Repository = "https://github.com/shuonanchen/morph_toolbox"
+Issues = "https://github.com/shuonanchen/morph_toolbox/issues"
+
+[tool.setuptools.dynamic]
+version = { attr = "morph_toolbox.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["morph_toolbox*"]
+
+[tool.setuptools.package-data]
+morph_toolbox = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
