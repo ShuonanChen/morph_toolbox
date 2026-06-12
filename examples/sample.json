@@ -1,0 +1,20 @@
+{
+  "comment": "Same tiny neuron as sample.swc, in a nested-list JSON form to exercise the converter.",
+  "neuron": {
+    "compartmentList": [
+      {"sampleNumber": 1,  "structureIdentifier": 1, "x": 0,   "y": 0,  "z": 0,  "radius": 5.0, "parentSampleNumber": -1},
+      {"sampleNumber": 2,  "structureIdentifier": 1, "x": 0,   "y": 0,  "z": 2,  "radius": 5.0, "parentSampleNumber": 1},
+      {"sampleNumber": 3,  "structureIdentifier": 3, "x": 5,   "y": 5,  "z": 0,  "radius": 1.5, "parentSampleNumber": 1},
+      {"sampleNumber": 4,  "structureIdentifier": 3, "x": 10,  "y": 12, "z": 0,  "radius": 1.0, "parentSampleNumber": 3},
+      {"sampleNumber": 5,  "structureIdentifier": 3, "x": 18,  "y": 14, "z": 2,  "radius": 0.8, "parentSampleNumber": 4},
+      {"sampleNumber": 6,  "structureIdentifier": 3, "x": 9,   "y": -8, "z": 0,  "radius": 1.2, "parentSampleNumber": 1},
+      {"sampleNumber": 7,  "structureIdentifier": 3, "x": 16,  "y": -16,"z": -3, "radius": 0.7, "parentSampleNumber": 6},
+      {"sampleNumber": 8,  "structureIdentifier": 2, "x": -6,  "y": 4,  "z": 0,  "radius": 1.0, "parentSampleNumber": 1},
+      {"sampleNumber": 9,  "structureIdentifier": 2, "x": -14, "y": 9,  "z": 1,  "radius": 0.6, "parentSampleNumber": 8},
+      {"sampleNumber": 10, "structureIdentifier": 2, "x": -22, "y": 6,  "z": 4,  "radius": 0.5, "parentSampleNumber": 9},
+      {"sampleNumber": 11, "structureIdentifier": 4, "x": 2,   "y": 9,  "z": 0,  "radius": 1.3, "parentSampleNumber": 1},
+      {"sampleNumber": 12, "structureIdentifier": 4, "x": 4,   "y": 20, "z": -2, "radius": 0.9, "parentSampleNumber": 11},
+      {"sampleNumber": 13, "structureIdentifier": 4, "x": -3,  "y": 28, "z": -5, "radius": 0.6, "parentSampleNumber": 12}
+    ]
+  }
+}
