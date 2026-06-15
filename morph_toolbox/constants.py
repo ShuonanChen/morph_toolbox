@@ -40,6 +40,10 @@ SWC_TYPE_COLORS = {
 # Fallback color for any type code not in SWC_TYPE_COLORS.
 DEFAULT_COLOR = "#333333"
 
+# Approximate CCFv3 full-volume extent in microns (for plot bounds / sanity
+# checks on registered coordinates).
+CCF_EXTENT_UM = {"x": (0, 13200), "y": (0, 8000), "z": (0, 11400)}
+
 
 def type_name(code: int) -> str:
     """Return the human-readable name for an SWC type code."""

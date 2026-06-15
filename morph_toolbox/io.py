@@ -9,6 +9,7 @@ preserving topology.
 
 from __future__ import annotations
 
+import glob
 import os
 from pathlib import Path
 
@@ -19,6 +20,55 @@ from .constants import ROOT_PARENT, SWC_COLUMNS
 from .core import Morphology
 
 PathLike = "os.PathLike | str"
+
+
+def find_swc_files(data_root) -> list[str]:
+    """Return a sorted list of all ``.swc`` file paths under ``data_root``.
+
+    Files are matched one directory deep (``<data_root>/<sample>/<neuron>.swc``),
+    the common one-folder-per-sample layout.  ``data_root`` is required -- the
+    toolbox does not assume any particular dataset location.
+    """
+    root = Path(data_root)
+    return sorted(glob.glob(str(root / "*" / "*.swc")))
+
+
+def build_file_index(data_root) -> pd.DataFrame:
+    """Build a DataFrame index of every SWC file under ``data_root``.
+
+    Columns: ``sample_id`` (parent folder), ``neuron_id`` (file stem, e.g.
+    "041"), ``filename``, ``path``, ``size_bytes``.
+    """
+    rows = []
+    for p in find_swc_files(data_root):
+        p = Path(p)
+        rows.append({
+            "sample_id": p.parent.name,
+            "neuron_id": p.stem,
+            "filename": p.name,
+            "path": str(p),
+            "size_bytes": p.stat().st_size,
+        })
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df = df.sort_values(["sample_id", "neuron_id"]).reset_index(drop=True)
+    return df
+
+
+def load_many(paths, reindex: bool = True) -> list[Morphology]:
+    """Load multiple SWC files into a list of :class:`Morphology` objects.
+
+    Each morphology's ``name`` is set to its file stem and its ``metadata``
+    carries ``sample_id`` (parent folder) and ``neuron_id`` (stem) identifying
+    the source file.
+    """
+    out = []
+    for p in paths:
+        p = Path(p)
+        morph = load_swc(p, reindex=reindex)
+        morph.metadata.update({"sample_id": p.parent.name, "neuron_id": p.stem})
+        out.append(morph)
+    return out
 
 
 def _is_consecutive(ids: np.ndarray) -> bool:

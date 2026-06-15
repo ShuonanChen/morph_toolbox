@@ -4,22 +4,27 @@ A small, well-organized toolbox for working with neuron **morphology** data.
 It centers on the standard [SWC](http://www.neuronland.org/NLMorphologyConverter/MorphologyFormats/SWC/Spec.html)
 reconstruction format and gives you three core capabilities:
 
-- **Load** SWC files into a clean, validated data structure.
+- **Load** SWC files into a clean, validated data structure (single files or a
+  whole dataset via a file index).
 - **Convert** JSON neuron descriptions into SWC (tolerant of many JSON shapes).
+- **Analyze** per-neuron morphometrics, terminal tips, and branch pruning, plus
+  population-wide morphometric tables.
 - **Visualize** a neuron in 2D (XY / XZ / YZ projections) or 3D, colored by point type.
-
-It's intentionally simple and modular so it can grow (morphometrics, batch
-processing, downsampling, etc.) without rework.
+- **Annotate** (optional) reconstructions against the Allen CCFv3 to map nodes /
+  axon terminals to brain regions.
 
 ## Install
 
 ```bash
-python -m pip install -e .          # runtime install
-python -m pip install -e ".[dev]"   # + test/build tooling
+python -m pip install -e .            # runtime install
+python -m pip install -e ".[ccf]"     # + Allen CCF annotation (pynrrd)
+python -m pip install -e ".[analysis]" # + tqdm progress bars
+python -m pip install -e ".[dev]"     # + test/build tooling (and the above)
 ```
 
 Requires Python ≥ 3.9 with `numpy`, `pandas`, and `matplotlib`. The package
 ships type information (`py.typed`), so type checkers see its annotations.
+CCF annotation additionally needs `pynrrd` (the `ccf` extra).
 
 To build a distributable wheel and sdist:
 
@@ -43,6 +48,20 @@ mt.json_to_swc("examples/sample.json", "out.swc")
 # 3. Visualize
 mt.plot_2d(morph, projection="xy")
 mt.plot_3d(morph)
+
+# 4. Analyze
+morph.morphometrics()                  # flat dict of per-neuron features
+morph.terminal_nodes(types=2)          # axon tip rows
+morph.prune_branches(0.5, seed=0)      # drop ~50% of nodes as whole branches
+
+# 5. Work over a whole dataset
+idx = mt.build_file_index("/path/to/data")   # one row per .swc file
+feats = mt.morphometrics_table(idx)           # one morphometrics row per neuron
+
+# 6. (optional) Allen CCF brain-region annotation  -- needs morph_toolbox[ccf]
+from morph_toolbox import ccf
+ccf.annotate_morphology(morph, cache_dir="data/ccf_cache")     # per-node regions
+ccf.projection_vector(morph, cache_dir="data/ccf_cache")       # axon-target histogram
 ```
 
 Run the full demo (writes `examples/quickstart_output.png`):
@@ -57,10 +76,12 @@ python examples/quickstart.py
 morph_toolbox/
 ├── morph_toolbox/          # the package
 │   ├── __init__.py         # public API (load_swc, json_to_swc, plot_2d, ...)
-│   ├── constants.py        # SWC type codes, names, and plot colors
+│   ├── constants.py        # SWC type codes, names, plot colors, CCF extent
 │   ├── core.py             # the Morphology class (wraps the SWC node table)
-│   ├── io.py               # load_swc / save_swc / reindex_nodes
+│   ├── io.py               # load_swc / save_swc / reindex_nodes / file index
 │   ├── convert.py          # json_to_morphology / json_to_swc
+│   ├── analysis.py         # morphometrics_table (population batch)
+│   ├── ccf.py              # optional Allen CCF brain-region annotation
 │   └── viz.py              # plot_2d / plot_3d
 ├── examples/               # runnable demo + sample SWC and JSON
 └── tests/                  # pytest suite
@@ -85,7 +106,26 @@ and exposes topology and geometry helpers:
 | `morph.total_length()` | total cable length |
 | `morph.bounding_box()` | `(min_xyz, max_xyz)` |
 | `morph.type_counts()` | nodes per named type |
-| `morph.summary()` | dict of the above |
+| `morph.summary()` | structured dict of the above |
+| `morph.terminal_nodes(types=None)` | terminal-tip rows (optionally by type) |
+| `morph.morphometrics()` | flat dict of scalar features (for tabulating) |
+| `morph.prune_branches(frac, seed=...)` | drop whole branches → new Morphology |
+
+### Datasets & analysis
+
+For directory layouts of `<root>/<sample>/<neuron>.swc`, `mt.build_file_index(root)`
+returns one row per file (`sample_id, neuron_id, filename, path, size_bytes`),
+`mt.find_swc_files(root)` lists the paths, and `mt.load_many(paths)` loads them
+into a list of `Morphology`. `mt.morphometrics_table(file_index)` computes
+`Morphology.morphometrics()` for every file and returns one row per neuron.
+
+### CCF brain-region annotation (optional)
+
+`morph_toolbox.ccf` maps CCFv3 micron coordinates to Allen brain regions. It
+needs `pynrrd` (`pip install morph_toolbox[ccf]`) and a `cache_dir` for the
+downloaded annotation volume + ontology: `ccf.annotate_points`,
+`ccf.annotate_region`, `ccf.annotate_morphology`, and `ccf.projection_vector`
+(a normalized axon-terminal region histogram).
 
 ### SWC point types
 
@@ -114,9 +154,6 @@ non-positive/missing parent becomes the root sentinel `-1`.
 ```bash
 python -m pytest
 ```
-
-> `example_tools.py` at the repo root is a reference scratchpad of prior
-> functions and is **not** part of the package.
 
 ## License
 

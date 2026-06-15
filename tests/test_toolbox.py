@@ -1,14 +1,17 @@
 """Tests for morph_toolbox: loading, conversion, round-trip, and plotting."""
 
+import shutil
 from pathlib import Path
 
 import matplotlib
 
 matplotlib.use("Agg")
 import numpy as np
+import pandas as pd
 import pytest
 
 import morph_toolbox as mt
+from morph_toolbox import ccf
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 SAMPLE_SWC = EXAMPLES / "sample.swc"
@@ -181,3 +184,142 @@ def test_plot_2d_bad_projection():
     m = mt.load_swc(SAMPLE_SWC)
     with pytest.raises(ValueError):
         mt.plot_2d(m, projection="ab")
+
+
+# -- terminal nodes --------------------------------------------------------
+
+def test_terminal_nodes():
+    m = mt.load_swc(SAMPLE_SWC)
+    tips = m.terminal_nodes()
+    assert len(tips) == m.num_tips == 5
+    # Only node 10 is an axon (type 2) terminal in the sample.
+    axon_tips = m.terminal_nodes(types=2)
+    assert len(axon_tips) == 1
+    assert set(axon_tips["id"]) == {10}
+    # List of types also works: dendritic tips are nodes 5, 7 (type 3) and 13 (type 4).
+    assert set(m.terminal_nodes(types=[3, 4])["id"]) == {5, 7, 13}
+
+
+# -- morphometrics ---------------------------------------------------------
+
+def test_morphometrics_fields():
+    m = mt.load_swc(SAMPLE_SWC)
+    feats = m.morphometrics()
+    expected = {
+        "n_nodes", "n_branch_points", "n_tips", "n_soma_nodes", "n_axon_nodes",
+        "n_dend_nodes", "n_undef_nodes", "total_length_um", "max_path_radius_um",
+        "mean_radius_um", "bbox_x_um", "bbox_y_um", "bbox_z_um",
+        "soma_x", "soma_y", "soma_z",
+    }
+    assert expected.issubset(feats)
+    assert feats["n_nodes"] == 13
+    assert feats["n_tips"] == 5
+    assert feats["n_soma_nodes"] == 2     # nodes 1 and 2 are type 1
+    assert feats["n_axon_nodes"] == 3     # nodes 8, 9, 10
+    assert feats["total_length_um"] > 0
+    # Matches the cable length exposed by the Morphology directly.
+    assert feats["total_length_um"] == pytest.approx(m.total_length())
+
+
+# -- pruning ---------------------------------------------------------------
+
+def test_prune_branches_reduces_and_stays_valid():
+    m = mt.load_swc(SAMPLE_SWC)
+    pruned = m.prune_branches(0.3, seed=0)
+    assert isinstance(pruned, mt.Morphology)
+    assert len(pruned) < len(m)
+    # Reindexed to a contiguous 1..N and still a valid tree.
+    assert list(pruned.nodes["id"]) == list(range(1, len(pruned) + 1))
+    pruned.validate()
+    assert pruned.metadata["n_removed"] == len(m) - len(pruned)
+    assert 0 < pruned.metadata["frac_removed"] <= 1.0
+    # Soma is never removed.
+    assert (pruned.nodes["type"] == 1).any()
+
+
+def test_prune_branches_frac_zero_is_noop():
+    m = mt.load_swc(SAMPLE_SWC)
+    pruned = m.prune_branches(0.0)
+    assert len(pruned) == len(m)
+    assert pruned.metadata["n_removed"] == 0
+    assert pruned.metadata["frac_removed"] == 0.0
+
+
+def test_prune_branches_reproducible():
+    m = mt.load_swc(SAMPLE_SWC)
+    a = m.prune_branches(0.5, seed=7)
+    b = m.prune_branches(0.5, seed=7)
+    assert a.metadata["n_removed"] == b.metadata["n_removed"]
+    assert list(a.nodes["id"]) == list(b.nodes["id"])
+
+
+# -- file index / batch ----------------------------------------------------
+
+@pytest.fixture
+def mini_dataset(tmp_path):
+    """A <root>/<sample>/<neuron>.swc layout with two copies of the sample."""
+    for sample, neuron in [("s1", "001"), ("s1", "002"), ("s2", "001")]:
+        dest = tmp_path / sample / f"{neuron}.swc"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(SAMPLE_SWC, dest)
+    return tmp_path
+
+
+def test_find_swc_files(mini_dataset):
+    files = mt.find_swc_files(mini_dataset)
+    assert len(files) == 3
+    assert files == sorted(files)
+
+
+def test_build_file_index(mini_dataset):
+    idx = mt.build_file_index(mini_dataset)
+    assert list(idx.columns) == [
+        "sample_id", "neuron_id", "filename", "path", "size_bytes"]
+    assert len(idx) == 3
+    assert set(idx["sample_id"]) == {"s1", "s2"}
+    assert (idx["size_bytes"] > 0).all()
+
+
+def test_load_many(mini_dataset):
+    idx = mt.build_file_index(mini_dataset)
+    morphs = mt.load_many(idx["path"])
+    assert len(morphs) == 3
+    assert all(isinstance(m, mt.Morphology) for m in morphs)
+    assert all("sample_id" in m.metadata and "neuron_id" in m.metadata
+               for m in morphs)
+
+
+def test_morphometrics_table(mini_dataset):
+    idx = mt.build_file_index(mini_dataset)
+    table = mt.morphometrics_table(idx, progress=False)
+    assert len(table) == 3
+    assert list(table.columns[:2]) == ["sample_id", "neuron_id"]
+    assert {"n_nodes", "total_length_um", "soma_x"}.issubset(table.columns)
+    assert (table["n_nodes"] == 13).all()
+
+
+# -- CCF annotation (optional dependency) ----------------------------------
+
+def test_ccf_extent_exposed():
+    assert ccf.CCF_EXTENT_UM == mt.CCF_EXTENT_UM
+    assert ccf.CCF_EXTENT_UM["x"] == (0, 13200)
+
+
+def test_ccf_requires_cache_dir():
+    with pytest.raises(ValueError):
+        ccf.load_ccf_ontology(None)
+
+
+def test_ccf_annotation_without_pynrrd(tmp_path):
+    """If pynrrd is unavailable, the volume loader raises a clear ImportError."""
+    pytest.importorskip  # keep import side-effect-free
+    try:
+        import nrrd  # noqa: F401
+        has_nrrd = True
+    except ImportError:
+        has_nrrd = False
+
+    if has_nrrd:
+        pytest.skip("pynrrd installed; download-dependent path not exercised")
+    with pytest.raises(ImportError, match="pynrrd"):
+        ccf.load_ccf_annotation(tmp_path, resolution=25)

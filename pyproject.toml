@@ -32,7 +32,9 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "build>=1.0"]
+ccf = ["pynrrd>=0.4"]
+analysis = ["tqdm>=4"]
+dev = ["pytest>=7", "build>=1.0", "pynrrd>=0.4", "tqdm>=4"]
 
 [project.urls]
 Homepage = "https://github.com/shuonanchen/morph_toolbox"

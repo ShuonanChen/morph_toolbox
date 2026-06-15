@@ -17,20 +17,38 @@ JSON conversion in :mod:`morph_toolbox.convert`, and plotting in
 
 from __future__ import annotations
 
-from . import constants
-from .constants import SWC_TYPE_COLORS, SWC_TYPE_NAMES, type_color, type_name
+from . import ccf, constants
+from .analysis import morphometrics_table
+from .constants import (
+    CCF_EXTENT_UM,
+    SWC_TYPE_COLORS,
+    SWC_TYPE_NAMES,
+    type_color,
+    type_name,
+)
 from .convert import json_to_morphology, json_to_swc
 from .core import Morphology
-from .io import load_swc, reindex_nodes, save_swc
+from .io import (
+    build_file_index,
+    find_swc_files,
+    load_many,
+    load_swc,
+    reindex_nodes,
+    save_swc,
+)
 from .viz import plot_2d, plot_3d
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Morphology",
     "load_swc",
     "save_swc",
     "reindex_nodes",
+    "find_swc_files",
+    "build_file_index",
+    "load_many",
+    "morphometrics_table",
     "json_to_morphology",
     "json_to_swc",
     "plot_2d",
@@ -39,5 +57,7 @@ __all__ = [
     "type_color",
     "SWC_TYPE_NAMES",
     "SWC_TYPE_COLORS",
+    "CCF_EXTENT_UM",
     "constants",
+    "ccf",
 ]
